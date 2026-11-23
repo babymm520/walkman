@@ -83,7 +83,7 @@ index cc088a1..e8d8e73 100644
  				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.walkmanTests;
  				PRODUCT_NAME = "$(TARGET_NAME)";
 diff --git a/walkman/CloudSync.swift b/walkman/CloudSync.swift
-index 9945a1a..a7a64de 100644
+index 9945a1a..a34b864 100644
 --- a/walkman/CloudSync.swift
 +++ b/walkman/CloudSync.swift
 @@ -8,7 +8,11 @@ import Combine
@@ -99,7 +99,7 @@ index 9945a1a..a7a64de 100644
      private var observer: NSObjectProtocol?
      let didReceiveRemoteChange = PassthroughSubject<Void, Never>()
  
-@@ -18,10 +22,11 @@ final class CloudSync: ObservableObject {
+@@ -18,17 +22,18 @@ final class CloudSync: ObservableObject {
      }
  
      private init() {
@@ -113,6 +113,14 @@ index 9945a1a..a7a64de 100644
          ) { [weak self] _ in
              Task { @MainActor [weak self] in
                  self?.lastSyncedAt = Date()
+                 self?.didReceiveRemoteChange.send()
+             }
+         }
+-        store.synchronize()
++        store?.synchronize()
+     }
+ 
+     deinit {
 @@ -43,19 +48,19 @@ final class CloudSync: ObservableObject {
              print("[CloudSync] skipping \(key): \(data.count) bytes exceeds limit")
              return
@@ -317,7 +325,7 @@ index 500e9be..6b9bbc3 100644
  
      // MARK: - Overlays (mini player, error banner, full player)
 diff --git a/walkman/ScriptManagerView.swift b/walkman/ScriptManagerView.swift
-index 5fcd880..0a76421 100644
+index 5fcd880..083347c 100644
 --- a/walkman/ScriptManagerView.swift
 +++ b/walkman/ScriptManagerView.swift
 @@ -22,11 +22,12 @@ struct ScriptManagerView: View {
@@ -337,6 +345,15 @@ index 5fcd880..0a76421 100644
              } else {
                  ForEach(scripts.scripts) { script in
                      let isLoaded = sources.loadedScripts.contains { $0.script.id == script.id }
+@@ -147,7 +148,7 @@ struct ScriptManagerView: View {
+                         Button("取消") { showImport = false; reset() }
+                     }
+                 }
+-                .onChange(of: importMode) {
++                .onChange(of: importMode) { _ in
+                     // Each mode takes a different input; don't carry stale text/file across.
+                     inputText = ""; pickedFileName = nil; error = nil
+                 }
 diff --git a/walkman/SearchView.swift b/walkman/SearchView.swift
 index 98a26e3..444dea3 100644
 --- a/walkman/SearchView.swift
@@ -351,8 +368,23 @@ index 98a26e3..444dea3 100644
      }
  
      private func resultsList(_ results: [Track]) -> some View {
+diff --git a/walkman/SongRecognizer.swift b/walkman/SongRecognizer.swift
+index 3b729f2..1c489e4 100644
+--- a/walkman/SongRecognizer.swift
++++ b/walkman/SongRecognizer.swift
+@@ -39,7 +39,9 @@ final class SongRecognizer: ObservableObject {
+         state = .listening
+         permissionTask = Task { [weak self] in
+             guard let self else { return }
+-            let granted = await AVAudioApplication.requestRecordPermission()
++            let granted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
++                AVAudioSession.sharedInstance().requestRecordPermission { cont.resume(returning: $0) }
++            }
+             guard !Task.isCancelled else { return }
+             guard granted else { self.state = .micDenied; return }
+             self.beginListening()
 diff --git a/walkman/SonglistView.swift b/walkman/SonglistView.swift
-index 598f476..67cc27d 100644
+index 598f476..b874086 100644
 --- a/walkman/SonglistView.swift
 +++ b/walkman/SonglistView.swift
 @@ -66,7 +66,9 @@ struct SonglistView: View {
@@ -366,6 +398,15 @@ index 598f476..67cc27d 100644
                  } else if playlists.isEmpty && isSearching && !isLoading {
                      BrandedEmpty(icon: "magnifyingglass",
                                   title: "没有找到歌单",
+@@ -92,7 +94,7 @@ struct SonglistView: View {
+             SonglistDetailView(info: info)
+         }
+         // Switching source invalidates the tag filter, cached tags and any active search.
+-        .onChange(of: selectedSourceRaw) {
++        .onChange(of: selectedSourceRaw) { _ in
+             selectedTag = .all
+             tagGroups = []
+             tagsLoadedSource = nil
 @@ -368,7 +370,9 @@ struct SonglistDetailView: View {
              } else if isLoading {
                  LoadingPlaceholder()
@@ -377,6 +418,54 @@ index 598f476..67cc27d 100644
              }
          }
          // Stretch to the full safe area so .background paints the whole screen during
+diff --git a/walkman/StatsView.swift b/walkman/StatsView.swift
+index ef5d299..d2b4c82 100644
+--- a/walkman/StatsView.swift
++++ b/walkman/StatsView.swift
+@@ -185,6 +185,19 @@ struct StatsView: View {
+ 
+     // MARK: - Source breakdown (donut)
+ 
++    private var donutSlices: [(start: CGFloat, end: CGFloat, color: Color)] {
++        let total = sourceBreakdown.reduce(0) { $0 + $1.count }
++        guard total > 0 else { return [] }
++        var acc: CGFloat = 0
++        var out: [(start: CGFloat, end: CGFloat, color: Color)] = []
++        for entry in sourceBreakdown {
++            let frac = CGFloat(entry.count) / CGFloat(total)
++            out.append((start: acc, end: min(acc + frac, 1), color: entry.source.tint))
++            acc += frac
++        }
++        return out
++    }
++
+     @ViewBuilder
+     private var sourcePieSection: some View {
+         if !sourceBreakdown.isEmpty {
+@@ -192,13 +205,16 @@ struct StatsView: View {
+                 sectionTitle("音源分布", systemImage: "chart.pie.fill")
+                 HStack(spacing: DS.Spacing.xl) {
+                     // Donut chart
+-                    Chart(sourceBreakdown, id: \.source) { entry in
+-                        SectorMark(
+-                            angle: .value("count", entry.count),
+-                            innerRadius: .ratio(0.6),
+-                            angularInset: 2
+-                        )
+-                        .foregroundStyle(entry.source.tint)
++                    // iOS 16 兼容:手绘环形图(SectorMark 需要 iOS 17)
++                    ZStack {
++                        Circle()
++                            .stroke(Color(.tertiarySystemFill), lineWidth: 16)
++                        ForEach(Array(donutSlices.enumerated()), id: \.offset) { _, slice in
++                            Circle()
++                                .trim(from: slice.start, to: slice.end)
++                                .stroke(slice.color, style: StrokeStyle(lineWidth: 16, lineCap: .butt))
++                                .rotationEffect(.degrees(-90))
++                        }
+                     }
+                     .frame(width: 120, height: 120)
+ 
 diff --git a/walkman/iPad/IPadHomeView.swift b/walkman/iPad/IPadHomeView.swift
 index 489b3c9..4c7a670 100644
 --- a/walkman/iPad/IPadHomeView.swift
@@ -416,6 +505,19 @@ index 25c109b..a694d20 100644
              path = NavigationPath()
          }
          // Mac 状态栏菜单 → 切到搜索 / 打开播放器 —— 见 MacStatusBarController。
+diff --git a/walkman/iPad/IPadSonglistView.swift b/walkman/iPad/IPadSonglistView.swift
+index 2a87621..d2ef619 100644
+--- a/walkman/iPad/IPadSonglistView.swift
++++ b/walkman/iPad/IPadSonglistView.swift
+@@ -82,7 +82,7 @@ struct IPadSonglistView: View {
+         }
+         .background(IPad.Color.contentBackground)
+         // 源切换时清空 tag + keyword,跟 iPhone 行为一致
+-        .onChange(of: selectedSourceRaw) {
++        .onChange(of: selectedSourceRaw) { _ in
+             selectedTag = .all
+             tagGroups = []
+             tagsLoadedSource = nil
 diff --git a/walkman/iPad/IPadVinylDisc.swift b/walkman/iPad/IPadVinylDisc.swift
 index a4f1d01..fadde65 100644
 --- a/walkman/iPad/IPadVinylDisc.swift
