@@ -1,0 +1,214 @@
+name: Build TrollStore IPA
+
+
+
+on:
+
+  workflow_dispatch:
+  
+
+
+permissions:
+
+  contents: read
+  
+
+
+jobs:
+
+  build:
+  
+    runs-on: macos-15
+    
+    steps:
+    
+      - name: Checkout build configuration
+      
+        uses: actions/checkout@v4
+        
+
+
+      - name: Checkout upstream Walkman source
+      
+        uses: actions/checkout@v4
+        
+        with:
+        
+          repository: SincereXing/walkman
+          
+          ref: main
+          
+          path: source
+          
+
+
+      - name: Apply iOS 16.6.1 compatibility patch
+      
+        run: |
+        
+          set -euo pipefail
+          
+          cd source
+          
+          git apply "$GITHUB_WORKSPACE/ios16-compat.patch"
+          
+
+
+      - name: Select Xcode
+      
+        run: |
+        
+          set -euo pipefail
+          
+          if [ -d "/Applications/Xcode_16.4.app" ]; then
+          
+            sudo xcode-select -s "/Applications/Xcode_16.4.app/Contents/Developer"
+            
+          fi
+          
+          xcodebuild -version
+          
+
+
+      - name: Install ldid
+      
+        run: brew install ldid
+        
+
+
+      - name: Build unsigned iOS archive
+      
+        run: |
+        
+          set -euo pipefail
+          
+          cd source
+          
+          rm -rf build
+          
+          xcodebuild archive \
+          
+            -project walkman.xcodeproj \
+            
+            -scheme walkman \
+            
+            -configuration Release \
+            
+            -destination 'generic/platform=iOS' \
+            
+            -archivePath "$PWD/build/walkman.xcarchive" \
+            
+            -derivedDataPath "$PWD/build/DerivedData" \
+            
+            CODE_SIGNING_ALLOWED=NO \
+            
+            CODE_SIGNING_REQUIRED=NO \
+            
+            CODE_SIGN_IDENTITY=""
+            
+
+
+      - name: Fakesign app for TrollStore
+      
+        run: |
+        
+          set -euo pipefail
+          
+          cd source
+          
+          APP="$PWD/build/walkman.xcarchive/Products/Applications/walkman.app"
+          
+          test -d "$APP"
+          
+          test -f "$APP/walkman"
+          
+          ldid -S"$PWD/walkman/walkman.entitlements" "$APP/walkman"
+          
+          rm -rf build/Payload
+          
+          mkdir -p build/Payload
+          
+          cp -R "$APP" build/Payload/
+          
+          (cd build && zip -qry Walkman-iOS16-TrollStore.ipa Payload)
+          
+          unzip -l build/Walkman-iOS16-TrollStore.ipa | sed -n '1,80p'
+          
+
+
+      - name: Upload IPA
+      
+        uses: actions/upload-artifact@v4
+        
+        with:
+        
+          name: Walkman-iOS16-TrollStore
+          
+          path: source/build/Walkman-iOS16-TrollStore.ipa
+          
+          if-no-files-found: error
+          
+          retention-days: 30
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
