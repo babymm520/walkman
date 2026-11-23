@@ -1,0 +1,309 @@
+diff --git a/walkman.xcodeproj/project.pbxproj b/walkman.xcodeproj/project.pbxproj
+index cc088a1..f60e1c6 100644
+--- a/walkman.xcodeproj/project.pbxproj
++++ b/walkman.xcodeproj/project.pbxproj
+@@ -218,12 +218,10 @@
+ 				9F9F90912FAB834600FC275C /* Sources */,
+ 				9F9F90922FAB834600FC275C /* Frameworks */,
+ 				9F9F90932FAB834600FC275C /* Resources */,
+-				9F2153972FCC5A240063D17B /* Embed Foundation Extensions */,
+ 			);
+ 			buildRules = (
+ 			);
+ 			dependencies = (
+-				9F2153912FCC5A240063D17B /* PBXTargetDependency */,
+ 			);
+ 			fileSystemSynchronizedGroups = (
+ 				9F9F90972FAB834600FC275C /* walkman */,
+@@ -393,18 +391,15 @@
+ /* End PBXSourcesBuildPhase section */
+ 
+ /* Begin PBXTargetDependency section */
+-		9F2153912FCC5A240063D17B /* PBXTargetDependency */ = {
+ 			isa = PBXTargetDependency;
+ 			platformFilter = ios;
+ 			target = 9F21537B2FCC5A210063D17B /* WalkmanWidgetExtension */;
+ 			targetProxy = 9F2153902FCC5A240063D17B /* PBXContainerItemProxy */;
+ 		};
+-		9F9F90AB2FAB834800FC275C /* PBXTargetDependency */ = {
+ 			isa = PBXTargetDependency;
+ 			target = 9F9F90942FAB834600FC275C /* walkman */;
+ 			targetProxy = 9F9F90AA2FAB834800FC275C /* PBXContainerItemProxy */;
+ 		};
+-		9F9F90B52FAB834800FC275C /* PBXTargetDependency */ = {
+ 			isa = PBXTargetDependency;
+ 			target = 9F9F90942FAB834600FC275C /* walkman */;
+ 			targetProxy = 9F9F90B42FAB834800FC275C /* PBXContainerItemProxy */;
+@@ -498,7 +493,7 @@
+ 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -541,7 +536,7 @@
+ 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -615,7 +610,7 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+ 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+ 				MTL_FAST_MATH = YES;
+@@ -674,7 +669,7 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+ 				MTL_ENABLE_DEBUG_INFO = NO;
+ 				MTL_FAST_MATH = YES;
+@@ -693,7 +688,7 @@
+ 				CURRENT_PROJECT_VERSION = 1;
+ 				DEVELOPMENT_TEAM = G5PXDM7897;
+ 				GENERATE_INFOPLIST_FILE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				MARKETING_VERSION = 1.0;
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.walkmanTests;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+@@ -715,7 +710,7 @@
+ 				CURRENT_PROJECT_VERSION = 1;
+ 				DEVELOPMENT_TEAM = G5PXDM7897;
+ 				GENERATE_INFOPLIST_FILE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+ 				MARKETING_VERSION = 1.0;
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.walkmanTests;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+diff --git a/walkman/CoverImage.swift b/walkman/CoverImage.swift
+index e85faab..68e8190 100644
+--- a/walkman/CoverImage.swift
++++ b/walkman/CoverImage.swift
+@@ -250,11 +250,11 @@ struct CoverImage<Content: View, Placeholder: View>: View {
+         }
+         // .task 不执行的宿主环境靠这条兜底:onChange 跟着 body 求值走,
+         // 起一个脱离视图生命周期的任务去下载,下完由 signal 驱动重绘。
+-        .onChange(of: url, initial: true) { _, newURL in
++        .onChange(of: url) { newURL in
+             guard CoverImageCache.cached(newURL, maxPixel: maxPixel) == nil else { return }
+             Task { _ = await CoverImageCache.load(newURL, maxPixel: maxPixel) }
+         }
+-        .onChange(of: scenePhase) { _, phase in
++        .onChange(of: scenePhase) { phase in
+             // 后台期间任务会被取消,回前台时如果还是占位图就再试一次 ——
+             // 否则"最小化时切了几首歌,回来封面一直空着"会一直好不了。
+             if phase == .active, image == nil {
+diff --git a/walkman/DesignSystem.swift b/walkman/DesignSystem.swift
+index c8eaba7..9a574df 100644
+--- a/walkman/DesignSystem.swift
++++ b/walkman/DesignSystem.swift
+@@ -218,14 +218,6 @@ struct ChipBar<T: Hashable>: View {
+             .padding(.horizontal, DS.Spacing.l)
+             .padding(.vertical, 2)
+         }
+-        // RootTabView 在 TabView 上挂了 .contentMargins(.bottom) 给迷你播放器让位。
+-        // 那个修饰符是走环境广播的,子树里**所有**滚动视图都会吃到 —— 包括这条横向
+-        // chip 条,于是 chip 下面凭空多出一大片空白。这里显式复位成 0。
+-        // 新增横向 ScrollView 时记得照做。
+-        .contentMargins(.bottom, 0, for: .scrollContent)
+-        // Subtle haptic on every selection change — the kind of "click" Apple uses on
+-        // segmented controls. Doesn't fire on the initial value, only on change.
+-        .sensoryFeedback(.selection, trigger: selection)
+     }
+ }
+ 
+diff --git a/walkman/LibraryView.swift b/walkman/LibraryView.swift
+index 7d2a9ca..1951e01 100644
+--- a/walkman/LibraryView.swift
++++ b/walkman/LibraryView.swift
+@@ -378,7 +378,7 @@ struct PlaylistDetailView: View {
+             .onAppear {
+                 artwork.extract(from: tracks.first.flatMap { downloads.displayCoverURL(for: $0) })
+             }
+-            .onChange(of: tracks.first?.id) { _, _ in
++            .onChange(of: tracks.first?.id) { _ in
+                 artwork.extract(from: tracks.first.flatMap { downloads.displayCoverURL(for: $0) })
+             }
+             // 收藏/下载弹窗 —— Mac → .popover,iPad/iPhone → .sheet(同 SonglistDetailView)。
+diff --git a/walkman/PlayerView.swift b/walkman/PlayerView.swift
+index ae221e2..74f0431 100644
+--- a/walkman/PlayerView.swift
++++ b/walkman/PlayerView.swift
+@@ -135,7 +135,7 @@ struct PlayerView: View {
+         .onAppear {
+             sync()
+         }
+-        .onChange(of: playback.currentTrack?.id) { _, _ in sync() }
++        .onChange(of: playback.currentTrack?.id) { _ in sync() }
+         // All sheets below are forced back to the system's real color scheme +
+         // re-injected with the brand tint. Both default-inherit through SwiftUI
+         // ancestors, but `.preferredColorScheme` re-roots the sheet so we lose
+@@ -718,7 +718,7 @@ struct LyricsScroll: View {
+                     startPoint: .top, endPoint: .bottom
+                 )
+             )
+-            .onChange(of: active) { _, new in
++            .onChange(of: active) { new in
+                 if let new {
+                     withAnimation(.easeInOut(duration: 0.45)) {
+                         proxy.scrollTo(lines[new].id, anchor: .center)
+diff --git a/walkman/QueueView.swift b/walkman/QueueView.swift
+index d356fdd..6aee38d 100644
+--- a/walkman/QueueView.swift
++++ b/walkman/QueueView.swift
+@@ -77,7 +77,7 @@ struct QueueView: View {
+                     Image(systemName: playback.isPlaying ? "waveform" : "speaker.wave.2.fill")
+                         .font(.system(size: 14, weight: .bold))
+                         .foregroundColor(.accentColor)
+-                        .symbolEffect(.variableColor.iterative, isActive: playback.isPlaying)
++                        .opacity(playback.isPlaying ? 1.0 : 0.75)
+                 } else {
+                     Text("\(idx + 1)")
+                         .font(.system(size: 12, weight: .medium, design: .rounded))
+diff --git a/walkman/RootTabView.swift b/walkman/RootTabView.swift
+index 500e9be..6b9bbc3 100644
+--- a/walkman/RootTabView.swift
++++ b/walkman/RootTabView.swift
+@@ -155,26 +155,26 @@ struct RootTabView: View {
+ 
+     private var phoneTabs: some View {
+         TabView(selection: $activeTab) {
+-            Tab(WalkmanSection.search.title,
+-                systemImage: WalkmanSection.search.systemImage,
+-                value: WalkmanSection.search.tag) {
+-                NavigationStack(path: $searchPath) { SearchView() }
+-            }
+-            Tab(WalkmanSection.leaderboard.title,
+-                systemImage: WalkmanSection.leaderboard.systemImage,
+-                value: WalkmanSection.leaderboard.tag) {
+-                NavigationStack(path: $leaderboardPath) { LeaderboardView() }
+-            }
+-            Tab(WalkmanSection.songlist.title,
+-                systemImage: WalkmanSection.songlist.systemImage,
+-                value: WalkmanSection.songlist.tag) {
+-                NavigationStack(path: $songlistPath) { SonglistView() }
+-            }
+-            Tab(WalkmanSection.library.title,
+-                systemImage: WalkmanSection.library.systemImage,
+-                value: WalkmanSection.library.tag) {
+-                NavigationStack(path: $libraryPath) { LibraryView() }
+-            }
++            NavigationStack(path: $searchPath) { SearchView() }
++                .tabItem {
++                    Label(WalkmanSection.search.title, systemImage: WalkmanSection.search.systemImage)
++                }
++                .tag(WalkmanSection.search.tag)
++            NavigationStack(path: $leaderboardPath) { LeaderboardView() }
++                .tabItem {
++                    Label(WalkmanSection.leaderboard.title, systemImage: WalkmanSection.leaderboard.systemImage)
++                }
++                .tag(WalkmanSection.leaderboard.tag)
++            NavigationStack(path: $songlistPath) { SonglistView() }
++                .tabItem {
++                    Label(WalkmanSection.songlist.title, systemImage: WalkmanSection.songlist.systemImage)
++                }
++                .tag(WalkmanSection.songlist.tag)
++            NavigationStack(path: $libraryPath) { LibraryView() }
++                .tabItem {
++                    Label(WalkmanSection.library.title, systemImage: WalkmanSection.library.systemImage)
++                }
++                .tag(WalkmanSection.library.tag)
+         }
+         // ⚠️ 迷你播放器的挂载方式,改之前务必读完这段 —— 这里来回折腾过很多次。
+         //
+@@ -208,14 +208,8 @@ struct RootTabView: View {
+         // tabbar 未必在首次布局时就在视图树里,出现和切页时各量一次;
+         // 量出来的值没变就不会发通知,不会造成额外重建。
+         .onAppear { tabBar.refresh() }
+-        .onChange(of: activeTab) { _, _ in tabBar.refresh() }
+-        .onChange(of: now.track == nil) { _, _ in tabBar.refresh() }
+-        // 让位。.contentMargins 通过环境传递给子树里所有滚动视图,包括
+-        // NavigationStack push 出来的二级页 —— 这正是 safeAreaInset 到不了的地方。
+-        // 没歌在放时不留白,免得列表底部凭空多一块空隙。
+-        .contentMargins(.bottom,
+-                        now.track != nil ? MiniPlayerMetrics.scrollBottomMargin : 0,
+-                        for: .scrollContent)
++        .onChange(of: activeTab) { _ in tabBar.refresh() }
++        .onChange(of: now.track == nil) { _ in tabBar.refresh() }
+     }
+ 
+     // MARK: - Overlays (mini player, error banner, full player)
+diff --git a/walkman/SearchView.swift b/walkman/SearchView.swift
+index 98a26e3..444dea3 100644
+--- a/walkman/SearchView.swift
++++ b/walkman/SearchView.swift
+@@ -158,9 +158,6 @@ struct SearchView: View {
+             }
+             .padding(.horizontal, DS.Spacing.l)
+         }
+-        // 同 ChipBar:抵消 RootTabView 广播下来的底部留白,否则这条横向 scope 条
+-        // 下面会多出一大片空白(那份留白是给迷你播放器让位用的,只该作用于纵向列表)。
+-        .contentMargins(.bottom, 0, for: .scrollContent)
+     }
+ 
+     private func resultsList(_ results: [Track]) -> some View {
+diff --git a/walkman/iPad/IPadHomeView.swift b/walkman/iPad/IPadHomeView.swift
+index 489b3c9..4c7a670 100644
+--- a/walkman/iPad/IPadHomeView.swift
++++ b/walkman/iPad/IPadHomeView.swift
+@@ -84,7 +84,7 @@ struct IPadHomeView: View {
+                 .frame(height: 280)
+                 .padding(.top, 8)
+                 // 手动滑动后重置自动切换的计时,不让 timer 立刻切走用户刚选的页
+-                .onChange(of: heroIndex) { _, _ in
++                .onChange(of: heroIndex) { _ in
+                     restartHeroTimer()
+                 }
+ 
+diff --git a/walkman/iPad/IPadPlayerView.swift b/walkman/iPad/IPadPlayerView.swift
+index b1dc4fd..6e9d612 100644
+--- a/walkman/iPad/IPadPlayerView.swift
++++ b/walkman/iPad/IPadPlayerView.swift
+@@ -62,7 +62,7 @@ struct IPadPlayerView: View {
+             extractColors()
+             loadLyrics()
+         }
+-        .onChange(of: playback.currentTrack?.id) { _, _ in
++        .onChange(of: playback.currentTrack?.id) { _ in
+             extractColors()
+             loadLyrics()
+         }
+diff --git a/walkman/iPad/IPadRootView.swift b/walkman/iPad/IPadRootView.swift
+index 25c109b..a694d20 100644
+--- a/walkman/iPad/IPadRootView.swift
++++ b/walkman/iPad/IPadRootView.swift
+@@ -85,7 +85,7 @@ struct IPadRootView: View {
+         .environmentObject(searchSession)
+         // Reset push stack when the user picks a different sidebar entry
+         // (going from "排行榜" to "歌单" shouldn't keep a 排行榜 detail pushed).
+-        .onChange(of: rawSelection) { _, _ in
++        .onChange(of: rawSelection) { _ in
+             path = NavigationPath()
+         }
+         // Mac 状态栏菜单 → 切到搜索 / 打开播放器 —— 见 MacStatusBarController。
+diff --git a/walkman/iPad/IPadVinylDisc.swift b/walkman/iPad/IPadVinylDisc.swift
+index a4f1d01..fadde65 100644
+--- a/walkman/iPad/IPadVinylDisc.swift
++++ b/walkman/iPad/IPadVinylDisc.swift
+@@ -73,7 +73,7 @@ struct IPadVinylDisc: View {
+             if isPlaying { startTicker() }
+         }
+         .onDisappear { stopTicker() }
+-        .onChange(of: isPlaying) { _, newPlaying in
++        .onChange(of: isPlaying) { newPlaying in
+             if newPlaying {
+                 startTicker()
+             } else {
