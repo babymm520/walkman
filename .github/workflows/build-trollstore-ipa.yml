@@ -1,214 +1,88 @@
 name: Build TrollStore IPA
 
-
-
 on:
-
   workflow_dispatch:
-  
-
+    inputs:
+      upstream_ref:
+        description: "Upstream branch/tag of SincereXing/walkman"
+        required: false
+        default: "main"
 
 permissions:
-
   contents: read
-  
-
 
 jobs:
-
   build:
-  
-    runs-on: macos-15
-    
+    runs-on: macos-26
+    timeout-minutes: 90
     steps:
-    
       - name: Checkout build configuration
-      
         uses: actions/checkout@v4
-        
-
 
       - name: Checkout upstream Walkman source
-      
         uses: actions/checkout@v4
-        
         with:
-        
           repository: SincereXing/walkman
-          
-          ref: main
-          
+          ref: ${{ inputs.upstream_ref }}
           path: source
-          
 
-
-      - name: Apply iOS 16.6.1 compatibility patch
-      
+      - name: Apply iOS 16 compatibility patch
         run: |
-        
           set -euo pipefail
-          
           cd source
-          
-          git apply "$GITHUB_WORKSPACE/ios16-compat.patch"
-          
+          git apply --verbose "$GITHUB_WORKSPACE/ios16-compat.patch"
 
-
-      - name: Select Xcode
-      
+      - name: Show toolchain
         run: |
-        
-          set -euo pipefail
-          
-          if [ -d "/Applications/Xcode_16.4.app" ]; then
-          
-            sudo xcode-select -s "/Applications/Xcode_16.4.app/Contents/Developer"
-            
-          fi
-          
           xcodebuild -version
-          
-
+          xcrun --sdk iphoneos --show-sdk-version
+          sw_vers
 
       - name: Install ldid
-      
         run: brew install ldid
-        
 
-
-      - name: Build unsigned iOS archive
-      
+      - name: Build unsigned archive
         run: |
-        
-          set -euo pipefail
-          
+          set -o pipefail
           cd source
-          
-          rm -rf build
-          
           xcodebuild archive \
-          
             -project walkman.xcodeproj \
-            
             -scheme walkman \
-            
             -configuration Release \
-            
             -destination 'generic/platform=iOS' \
-            
             -archivePath "$PWD/build/walkman.xcarchive" \
-            
             -derivedDataPath "$PWD/build/DerivedData" \
-            
             CODE_SIGNING_ALLOWED=NO \
-            
             CODE_SIGNING_REQUIRED=NO \
-            
-            CODE_SIGN_IDENTITY=""
-            
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
-
-      - name: Fakesign app for TrollStore
-      
+      - name: Package IPA
         run: |
-        
           set -euo pipefail
-          
           cd source
-          
           APP="$PWD/build/walkman.xcarchive/Products/Applications/walkman.app"
-          
           test -d "$APP"
-          
           test -f "$APP/walkman"
-          
-          ldid -S"$PWD/walkman/walkman.entitlements" "$APP/walkman"
-          
+          ldid -S"$GITHUB_WORKSPACE/trollstore.entitlements" "$APP/walkman"
           rm -rf build/Payload
-          
           mkdir -p build/Payload
-          
           cp -R "$APP" build/Payload/
-          
-          (cd build && zip -qry Walkman-iOS16-TrollStore.ipa Payload)
-          
-          unzip -l build/Walkman-iOS16-TrollStore.ipa | sed -n '1,80p'
-          
-
+          (cd build && zip -qry "Walkman-iOS16-TrollStore.ipa" Payload)
+          unzip -l "build/Walkman-iOS16-TrollStore.ipa" | sed -n '1,40p'
 
       - name: Upload IPA
-      
         uses: actions/upload-artifact@v4
-        
         with:
-        
           name: Walkman-iOS16-TrollStore
-          
           path: source/build/Walkman-iOS16-TrollStore.ipa
-          
           if-no-files-found: error
-          
           retention-days: 30
-          
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
